@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name="renderer" content="webkit">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="format-detection" content="telephone=no">
+<title>读取Camera</title>
+<style>
+.video_style {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+    display: block;
+    width: 100%;
+    background: #000;
+}
+</style>
+</head>
+<body>
+<video class="video_style"></video>
+<script>
+
+
+
+//var cameraRecorder = new MediaRecorder();
+var types = ["video/webm", 
+             "audio/webm", 
+             "video/webm\;codecs=vp8", 
+             "video/webm\;codecs=daala", 
+             "video/webm\;codecs=h264", 
+             "audio/webm\;codecs=opus", 
+             "video/mpeg"];
+try{
+for (var i in types) { 
+  console.log( "Is " + types[i] + " supported? " + (MediaRecorder.isTypeSupported(types[i]) ? "May Support" : "Not Support")); 
+  alert( "Is " + types[i] + " supported? " + (MediaRecorder.isTypeSupported(types[i]) ? "May Support" : "Not Support")); 
+}
+}catch(err){
+	alert(err);
+	console.log(err);
+}
+
+//用于兼容
+//window.URL = (window.URL || window.webkitURL || window.mozURL || window.msURL);
+if (navigator.mediaDevices === undefined) {
+    navigator.mediaDevices = {};
+}
+if (navigator.mediaDevices.getUserMedia === undefined) {
+    navigator.mediaDevices.getUserMedia = function(constraints) {
+        var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+        if (!getUserMedia) {
+            return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+        }
+        return new Promise(function(resolve, reject) {
+            getUserMedia.call(navigator, constraints, resolve, reject);
+        });
+    }
+}
+
+// 配置设置
+var mediaOpts = {
+    audio: false,
+    video: true,
+    // video: { width: 1280, height: 720 }
+    // video: { facingMode: "environment"}, // 或者 "user"
+}
+
+//调用成功
+function successFunc(stream) {
+    var video = document.querySelector('video');
+    if ("srcObject" in video) {
+        video.srcObject = stream
+    } else {
+        video.src = window.URL && window.URL.createObjectURL(stream) || stream
+    }
+    video.play();
+}
+//调用Camera失败
+function errorFunc(err) {
+    alert("Fail to get camera/n"+err.name);
+}
+
+//启动摄像头
+navigator.mediaDevices.getUserMedia(mediaOpts).then(successFunc).catch(errorFunc);
+</script>
+
+
+</body>
+</html>
