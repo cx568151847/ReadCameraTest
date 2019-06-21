@@ -16,7 +16,7 @@
     top: 0; bottom: 0;
     left: 0; right: 0;
     display: block;
-    width: 100%;
+    width: 100%;height:100%;
     background: #000;
 }
 </style>
@@ -25,9 +25,8 @@
 <video class="video_style"></video>
 <script>
 
-
-
-//var cameraRecorder = new MediaRecorder();
+function testIfMediaRecorderVariable(stream){
+var cameraRecorder = new MediaRecorder(stream);
 var types = ["video/webm", 
              "audio/webm", 
              "video/webm\;codecs=vp8", 
@@ -37,12 +36,13 @@ var types = ["video/webm",
              "video/mpeg"];
 try{
 for (var i in types) { 
-  console.log( "Is " + types[i] + " supported? " + (MediaRecorder.isTypeSupported(types[i]) ? "May Support" : "Not Support")); 
+  //console.log( "Is " + types[i] + " supported? " + (MediaRecorder.isTypeSupported(types[i]) ? "May Support" : "Not Support")); 
   alert( "Is " + types[i] + " supported? " + (MediaRecorder.isTypeSupported(types[i]) ? "May Support" : "Not Support")); 
 }
 }catch(err){
-	alert(err);
+	alert("Error："+err);
 	console.log(err);
+}
 }
 
 //用于兼容
@@ -72,6 +72,7 @@ var mediaOpts = {
 
 //调用成功
 function successFunc(stream) {
+	testIfMediaRecorderVariable(stream);//测试录制功能是否可用
     var video = document.querySelector('video');
     if ("srcObject" in video) {
         video.srcObject = stream
@@ -82,7 +83,8 @@ function successFunc(stream) {
 }
 //调用Camera失败
 function errorFunc(err) {
-    alert("Fail to get camera/n"+err.name);
+    alert("Fail to get camera "+err.name);
+	console.log("Fail to get camera "+err);
 }
 
 //启动摄像头
