@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>access to camera</title>
+</head>
+<body>
+  <video id='v1' width='480px' height='320px'></video><br>
+  <button id='record'>record</button>
+  <button id='stop'>stop</button>
+  <div id='soundClips'></div>
+  <br><a>------------------</a>
+  <br>
+  <video id='v2' width='480px' height='320px' controls></video><br>
+  <script>
+	//检测可用的格式
+  var types = ["video/webm", 
+             "audio/webm", 
+             "video/webm\;codecs=vp8", 
+             "video/webm\;codecs=daala", 
+             "video/webm\;codecs=h264", 
+             "audio/webm\;codecs=opus", 
+             "video/mpeg"];
+
+	for (var i in types) { 
+		console.log( "Type " + types[i] + " is" + (MediaRecorder.isTypeSupported(types[i]) ? " support " : " not support")); 
+	}
+
+
+
+    if (navigator.mediaDevices) {
+  console.log('getUserMedia supported.');
+
+  var constraints = { 
+	audio: true,
+	video: true
+	};
+  var chunks = [];
+
+  navigator.mediaDevices.getUserMedia(constraints)
+  .then(function(stream) {
+
+    var mediaRecorder = new MediaRecorder(stream);
+
+    //visualize(stream);
+	var video = document.getElementById('v1');
+	video.srcObject = stream;
+	video.play();
+	
+	var record = document.getElementById('record');
+	var stop = document.getElementById('stop');
+	//录制按钮
+    record.onclick = function() {
+		//检查是否已经开始录制
+	  if(mediaRecorder.state=='recording'){
+		console.log('no way');
+		return;
+	  }
+      mediaRecorder.start();//可以在参数中设置切片时间
+	  console.log('mediaRecorder state:');
+      console.log(mediaRecorder.state);
+      console.log("recorder started");
+      record.style.background = "red";
+      record.style.color = "black";
+    }
+	//停止录制按钮
+    stop.onclick = function() {
+		//检查是否已经停止录制
+	  if(mediaRecorder.state=='inactive'){
+		console.log('no way');
+		return;
+	  }
+      mediaRecorder.stop();
+	  console.log('mediaRecorder state:');
+      console.log(mediaRecorder.state);
+      console.log("recorder stopped");
+      record.style.background = "";
+      record.style.color = "";
+    }
+
+	//停止录制事件触发
+    mediaRecorder.onstop = function(e) {
+      console.log("data available after MediaRecorder.stop() called.");
+
+      //var clipName = prompt('Enter a name for your sound clip');
+
+      var clipContainer = document.createElement('article');
+      //var clipLabel = document.createElement('p');
+      var audio = document.createElement('audio');
+	  var video2 = document.getElementById('v2');
+      var deleteButton = document.createElement('button');
+     var soundClips = document.getElementById('soundClips');
+	 
+      clipContainer.classList.add('clip');
+      audio.setAttribute('controls', '');
+      deleteButton.innerHTML = "Delete";
+      //clipLabel.innerHTML = clipName;
+
+      clipContainer.appendChild(audio);
+      //clipContainer.appendChild(clipLabel);
+      clipContainer.appendChild(deleteButton);
+      soundClips.appendChild(clipContainer);
+
+      audio.controls = true;
+      var blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+	  var blob2 = new Blob(chunks, { 'type' : 'video/webm; codecs=h264' });
+	  console.log('blob');
+	  console.log(chunks);
+	  console.log(blob);
+	  console.log(blob2);
+      
+	  chunks = [];
+      var audioURL = URL.createObjectURL(blob);
+      audio.src = audioURL;
+	  
+	  var videoURL = URL.createObjectURL(blob2);
+	  video2.src = videoURL;
+	  video2.play();
+	  
+      console.log("recorder stopped");
+
+      deleteButton.onclick = function(e) {
+        evtTgt = e.target;
+        evtTgt.parentNode.parentNode.removeChild(evtTgt.parentNode);
+      }
+    }
+
+	//当有数据可用，开始录制
+	//事件的data属性会提供一个可用的Blob对象
+    mediaRecorder.ondataavailable = function(e) {
+	  console.log("Record data:");
+	  console.log(e.data);
+      chunks.push(e.data);
+    }
+  })
+  .catch(function(err) {
+    console.log('The following error occured: ' + err);
+  })
+}
+
+  </script>
+</body>
+</html>
