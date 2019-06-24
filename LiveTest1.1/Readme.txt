@@ -19,6 +19,7 @@ node server.js
 分为webrtc_S和webrtc_R两个页面，区分发送方和接收方
 修改页面内容，只有一个video
 
+因为node_modules文件夹因为文件过多所以未进行上传
 其中node_modules含有：
 express
 express generator
