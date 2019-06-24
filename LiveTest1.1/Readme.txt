@@ -1,20 +1,26 @@
-ÒòÎª·şÎñ¶ËÊ¹ÓÃÁËNode.js
-ĞèÒª°²×°npm·şÎñÀ´Æô¶¯Node.js
-ÆäÊµÊÇWebRTCÊ¾ÀıÖĞµÄWebsocket ChatĞŞ¸ÄµÄ
+å› ä¸ºæœåŠ¡ç«¯ä½¿ç”¨äº†Node.js
+éœ€è¦å®‰è£…npmæœåŠ¡æ¥å¯åŠ¨Node.js
+å…¶å®æ˜¯WebRTCç¤ºä¾‹ä¸­çš„Websocket Chatä¿®æ”¹çš„
 
-npmÄ£¿éÂ·¾¶Îª
+npmæ¨¡å—è·¯å¾„ä¸º
 C:\Users\dell\AppData\Roaming\npm\node_modules
 
-Ê¹ÓÃ·½·¨
+ä½¿ç”¨æ–¹æ³•
 E:
 cd LiveTest
 node server.js
-Æô¶¯ºó´ò¿ªÒ³Ãæhttp://127.0.0.1:3000
-ÔÙ´ò¿ªÒ³Ãæhttp://127.0.0.1:3000#true
+å¯åŠ¨åæ‰“å¼€é¡µé¢http://127.0.0.1:3000
+å†æ‰“å¼€é¡µé¢http://127.0.0.1:3000#true
 
-ÃüÁîĞĞÒ³ÃæË«»÷Ctrl+CÍË³ö
+å‘½ä»¤è¡Œé¡µé¢åŒå‡»Ctrl+Cé€€å‡º
 
 
 1.1
-·ÖÎªwebrtc_SºÍwebrtc_RÁ½¸öÒ³Ãæ£¬Çø·Ö·¢ËÍ·½ºÍ½ÓÊÕ·½
-ĞŞ¸ÄÒ³ÃæÄÚÈİ£¬Ö»ÓĞÒ»¸övideo
+åˆ†ä¸ºwebrtc_Så’Œwebrtc_Rä¸¤ä¸ªé¡µé¢ï¼ŒåŒºåˆ†å‘é€æ–¹å’Œæ¥æ”¶æ–¹
+ä¿®æ”¹é¡µé¢å†…å®¹ï¼Œåªæœ‰ä¸€ä¸ªvideo
+
+å…¶ä¸­node_moduleså«æœ‰ï¼š
+express
+express generator
+ws
+wrtc
