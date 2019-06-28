@@ -1,0 +1,297 @@
+﻿<html>
+<head>
+<title>Sender</title>
+<style>
+.video_class{
+	background: #000;
+}
+</style>
+</head>
+<body onbeforeunload="beforeunloadFn()" onunload="unloadFn()">
+    Local: <br>
+    <video id="localVideo" class='video_class' autoplay></video><br>
+	<a>input your username so that the other users can find you</a></a>
+	<br>
+	<input id='username' type='text'></input>
+	<br>
+	<button id='button_start' disabled='true'>start live</button>
+    <!--
+	Remote: <br>
+    <video id="remoteVideo" autoplay></video>
+	-->
+    <script>
+		var button_start = document.getElementById('button_start');
+		var username = null;
+		
+		function startlive(){
+			username = document.getElementById('username').value;
+			//alert(username);
+			readCamera();
+			button_start.disabled = true;
+		}
+		
+        // 与信令服务器的WebSocket连接
+        //var socket = new WebSocket("ws://127.0.0.1:3000");
+		var socket = new WebSocket("ws://10.27.210.27:3000");
+		
+		var mediaOpts = {
+			audio: true,
+			video: true
+			//video: { width: 1280, height: 720 }
+			// video: { facingMode: "environment"}, // 或者 "user"
+		}
+  
+        // stun和turn服务器
+        var iceServer = {
+            "iceServers": [{
+                "url": "stun:stun.l.google.com:19302"
+            }, {
+                "url": "turn:numb.viagenie.ca",
+                "username": "webrtc@live.com",
+                "credential": "muazkh"
+            }]
+        };
+
+        // 创建PeerConnection实例 (参数为null则没有iceserver，即使没有stunserver和turnserver，仍可在局域网下通讯)
+        var pc = new RTCPeerConnection(iceServer);
+
+        // 发送ICE候选到其他客户端
+        pc.onicecandidate = function(event){
+			console.log('on ice ready');
+            if (event.candidate !== null) {
+				
+				//找到ice候选后socket发送
+				if(!pc || !pc.remoteDescription.type){
+                socket.send(JSON.stringify({
+                    "event": "_ice_candidate",
+                    "data": {
+                        "candidate": event.candidate
+                    }
+                }));
+				}
+            }
+			console.log('on ice ready end');
+        };
+
+		
+        // 发送offer和answer的函数，发送本地session描述
+        var sendOfferFn = function(desc){
+			console.log('send offer');
+			console.log(desc);
+            pc.setLocalDescription(desc);
+            socket.send(JSON.stringify({ 
+                "event": "_offer",
+                "data": {
+                    "sdp": desc
+                }
+            }));
+			console.log('send who I am after send offer');
+			socket.send(JSON.stringify({
+                   "event": "_who",
+					"data": "sender",
+					"liver": username,//从input中读取的变量
+					"watcher": ""
+			}));
+        };
+		
+		//不是接收方应该不需要这个
+        var sendAnswerFn = function(desc){
+			console.log('send Answer');
+            pc.setLocalDescription(desc);
+            socket.send(JSON.stringify({ 
+                "event": "_answer",
+                "data": {
+                    "sdp": desc
+                }
+            }));
+        };
+
+        // 获取本地音频和视频流
+		console.log('get camera');
+		console.log(navigator);
+		//Camera调用成功
+		function successFunc(stream) {
+			var video = document.getElementById('localVideo');
+			if ("srcObject" in video) {
+				video.srcObject = stream;
+			} else {
+				video.src = window.URL && window.URL.createObjectURL(stream) || stream
+			}
+			
+				console.log(pc);
+				//video.play();
+				
+				//stream.getTracks().forEach(track => pc.addTrack(track, stream));
+				
+				pc.addStream(stream);
+
+			console.log('check pc\'s track');
+			console.log(pc);
+			
+            //发送一个offer信令
+			console.log('send offer');
+            pc.createOffer(sendOfferFn, function (error) {
+				console.log('Failure callback: ' + error);
+            });
+		}
+		//调用Camera失败
+		function errorFunc(err) {
+			alert("Fail to get camera "+err.name);
+			console.log("Fail to get camera ");
+			console.log(err);
+		}
+		function readCamera(){
+			//用于兼容
+			if (navigator.mediaDevices === undefined) {
+				navigator.mediaDevices = {};
+			}
+			if (navigator.mediaDevices.getUserMedia === undefined) {
+				console.log('navigator.mediaDevices.getUserMedia undefined');
+				navigator.mediaDevices.getUserMedia = function(constraints) {
+					var getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+					if (!getUserMedia) {
+						return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+					}
+					return new Promise(function(resolve, reject) {
+						getUserMedia.call(navigator, constraints, resolve, reject);
+					});
+				}
+			}
+	//启动摄像头
+		navigator.mediaDevices.getUserMedia(mediaOpts).then(successFunc).catch(errorFunc);
+		
+	}
+	/*
+        navigator.webkitGetUserMedia({
+            "audio": true,
+            "video": true
+        }, function(stream){
+            //绑定本地媒体流到video标签用于输出
+            document.getElementById('localVideo').srcObject = stream;
+            //向PeerConnection中加入需要发送的流
+            //pc.addStream(stream) 改为addTrack
+			stream.getTracks().forEach(track => pc.addTrack(track, stream));
+			console.log('check pc\'s track');
+			console.log(pc);
+			
+            //如果是发起方则发送一个offer信令
+            //if(isCaller){
+			console.log('send offer');
+             pc.createOffer(sendOfferFn, function (error) {
+				console.log('Failure callback: ' + error);
+                });
+            //}
+        }, function(error){
+            //处理媒体流创建失败错误
+            console.log('getUserMedia error: ' + error);
+        });
+*/
+		
+		
+        //处理到来的信令
+        socket.onmessage = function(event){
+            var json = JSON.parse(event.data);
+            console.log('onmessage: ', json);
+            //如果是一个ICE的候选，则将其加入到PeerConnection中，否则设定对方的session描述为传递过来的描述
+            if( json.event === "_ice_candidate" ){
+				//if(!pc || !pc.remoteDescription.type){
+					//push candidate onto queue...
+					pc.addIceCandidate(new RTCIceCandidate(json.data.candidate));
+				//}
+				
+				console.log('add ice');
+					//pc.addIceCandidate(new RTCIceCandidate(json.data.candidate));
+
+			} else {
+				console.log('set RemoteDescription');
+                pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp));
+                // 如果是一个offer，那么需要回复一个answer
+                if(json.event === "_offer") {
+                    pc.createAnswer(sendAnswerFn, function (error) {
+                        console.log('Failure callback: ' + error);
+                    });
+                }
+            }
+			console.log('handle msg end');
+        };
+		
+		
+		
+		
+		button_start.addEventListener('click',startlive,false);
+		
+		//测试用
+		//readCamera();
+		
+		socket.addEventListener('open', function () {
+			button_start.disabled = false;
+		});
+		
+		
+		/*
+		//页面关闭事件
+		function beforeunloadFn(){
+			alert('beforeunloadFn');
+			socket.send(JSON.stringify({
+                   "event": "_page_close",
+					"data": "beforeunload"
+			}));
+		}
+		
+		function unloadFn(){
+			alert('unloadFn');
+			socket.send(JSON.stringify({
+                   "event": "_page_close",
+					"data": "unload"
+			}));
+		}
+		*/
+		function handle_websocket_close(event){
+			console.log('ws close');
+			alert('连接中断');
+			var video = document.getElementById('localVideo');
+			video.srcObject = null;
+			console.log(video);
+		}
+		//监听websocket断开事件
+		socket.addEventListener('close',handle_websocket_close);
+		
+		
+		//循环显示当前ws状态
+		function now_ws_state(){
+			console.log('now ws state: ' + socket.readyState);
+			setTimeout(now_ws_state,1000);
+		}
+		//setTimeout(now_ws_state,1000);
+		
+		console.log(socket);
+		
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

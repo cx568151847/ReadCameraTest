@@ -1,0 +1,194 @@
+﻿<html>
+<head>
+<title>Receiver</title>
+</head>
+<body>
+    Remote: <br>
+    <video id="RemoteVideo" autoplay controls></video>
+	<a>input the liver you want to watch</a><br>
+	<input id='liver_wanted'></input>
+	<button id='get_liver_wanted'>connect</button>
+    <script>
+		var liver_wanted = null;//想要观看的liver
+		var liver_watch = null;//观看直播的user
+		var mediastream = null;
+		
+        // 与信令服务器的WebSocket连接
+        //var socket = new WebSocket("ws://127.0.0.1:3000");
+		var socket = new WebSocket("ws://10.27.210.27:3000");
+
+        // stun和turn服务器
+        var iceServer = {
+            "iceServers": [{
+                "url": "stun:stun.l.google.com:19301"
+            }, {
+                "url": "turn:numb.viagenie.ca",
+                "username": "webrtc@live.com",
+                "credential": "muazkh"
+            }]
+        };
+
+        // 创建PeerConnection实例 (参数为null则没有iceserver，即使没有stunserver和turnserver，仍可在局域网下通讯)
+        var pc = new RTCPeerConnection(iceServer);
+
+        // 发送ICE候选到其他客户端
+        pc.onicecandidate = function(event){
+            if (event.candidate !== null) {
+				//找到ice候选后socket发送
+                socket.send(JSON.stringify({
+                    "event": "_ice_candidate",
+                    "data": {
+                        "candidate": event.candidate
+                    }
+                }));
+            }
+        };
+
+		console.log(pc);
+		//当服务器挂载媒体流触发
+		pc.ontrack = function(event){
+			console.log('get MediaStream by ontrack! ');
+			console.log(event);
+			var RemoteVideo = document.getElementById('RemoteVideo');
+			//可能会出错
+			//var mediastream = new MediaStream();
+			//mediastream.addTrack(event.track);
+			mediastream = event.streams[0];
+			RemoteVideo.srcObject = mediastream;
+		
+		}
+		pc.onaddstream = function(event){
+			console.log('get MediaStream by onaddstream! ');
+			console.log(event);
+			var RemoteVideo = document.getElementById('RemoteVideo');
+			//可能会出错
+			//var mediastream = new MediaStream();
+			//mediastream.addTrack(event.track);
+			var mediastream = event.stream;
+			RemoteVideo.srcObject = mediastream;
+		
+		}
+		pc.onremovestream = function(event){
+			console.log('MediaStream Remove ');
+			console.log(event);
+		
+		}
+		/*
+        // 发送offer和answer的函数，发送本地session描述
+        var sendOfferFn = function(desc){
+			console.log('send offer');
+			console.log(desc);
+            pc.setLocalDescription(desc);
+            socket.send(JSON.stringify({ 
+                "event": "_offer",
+                "data": {
+                    "sdp": desc
+                }
+            }));
+			
+			console.log('send who I am after send offer');
+			socket.send(JSON.stringify({
+                   "event": "_who",
+					"data": "receiver",
+					"liver": liver,
+					"watcher": "user2"
+			}));
+			
+        };
+		*/
+		//收到offer后返回answer
+        var sendAnswerFn = function(desc){
+			console.log('send Answer');
+            pc.setLocalDescription(desc);
+            socket.send(JSON.stringify({ 
+                "event": "_answer",
+                "data": {
+                    "sdp": desc
+                }
+            }));
+        };
+
+/*
+		//暂时不主动发送，由服务器端来进行发送试试
+		console.log('send offer');
+        pc.createOffer(sendOfferFn, function (error) {
+			console.log('Failure callback: ' + error);
+            });
+*/	
+		
+		//处理到来的信令
+        socket.onmessage = function(event){
+			console.log('get msg');
+            var json = JSON.parse(event.data);
+            console.log('onmessage: ', json);
+            //如果是一个ICE的候选，则将其加入到PeerConnection中，否则设定对方的session描述为传递过来的描述
+            if( json.event === "_ice_candidate" ){
+                pc.addIceCandidate(new RTCIceCandidate(json.data.candidate));
+            } else {
+				console.log('set RemoteDescription');
+                pc.setRemoteDescription(new RTCSessionDescription(json.data.sdp));
+                // 如果是一个offer，那么需要回复一个answer
+                if(json.event === "_offer") {
+                    pc.createAnswer(sendAnswerFn, function (error) {
+                        console.log('Failure callback: ' + error);
+                    });
+                }
+            }
+        };
+		
+		//监听websocket，当成功连接时，发送
+		socket.addEventListener('open', function () {
+			//一个更新的createoffer，包含具体的发送
+			pc.createOffer().then(function(offer) {
+				return pc.setLocalDescription(offer);
+			})
+			.then(function() {
+				socket.send(JSON.stringify({ 
+					"event": "_offer",
+					"data": {
+						"sdp": pc.localDescription
+						}
+				}));
+				
+				//正式版本中应该在这里发送，因为是从链接中截取 //测试版本由connect按钮来发送
+				/*
+				console.log('send who I am after send offer');
+				socket.send(JSON.stringify({
+                   "event": "_who",
+					"data": "receiver",
+					//"liver": liver_wanted,
+					"liver": "1",
+					"watcher": liver_watch
+				}));
+				*/
+			})
+			.catch(function(reason) {
+				// An error occurred, so handle the failure to connect
+				console.log('error in createoffer : '+reason);
+			});
+		});
+		
+
+		var get_liver_wanted = document.getElementById('get_liver_wanted');
+		get_liver_wanted.addEventListener('click',function(){
+			liver_wanted = document.getElementById('liver_wanted').value;
+			console.log('username : ' + encodeURIComponent(liver_wanted));
+			socket.send(JSON.stringify({
+                   "event": "_who",
+					"data": "receiver",
+					"liver": liver_wanted,
+					"watcher": liver_watch
+				}));
+		});
+		
+        
+		//循环显示当前ws状态
+		function now_ws_state(){
+			console.log('now mediastream state: ' + mediastream.active);
+			setTimeout(now_ws_state,1000);
+		}
+		
+
+    </script>
+</body>
+</html>
